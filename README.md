@@ -7,7 +7,7 @@ aggregates (1995–2025, ~30 countries) and lets the reader explore the answer
 rather than take it on faith.
 
 - **Repository:** https://github.com/Armand-LAUENER/projet-data-viz
-- **Live app:** _<add Streamlit Community Cloud URL after deployment>_
+- **Live app:** https://projet-data-viz-fqbofjrosdu4xcvokeyvsb.streamlit.app/
 - **Demo video (2–4 min):** _<add link>_
 - **Storyboard:** [`STORYBOARD.md`](STORYBOARD.md)
 
