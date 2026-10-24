@@ -33,7 +33,10 @@ def load_geojson() -> dict:
 
 @st.cache_data(show_spinner=False)
 def snapshot_date() -> str:
-    """Download date recorded in the raw MANIFEST, if present."""
+    """Snapshot date. Prefers the committed meta, falls back to the raw MANIFEST."""
+    meta = C.PROCESSED_DIR / "snapshot.txt"
+    if meta.exists():
+        return meta.read_text().strip()
     manifest = C.RAW_DIR / "MANIFEST.json"
     if manifest.exists():
         try:

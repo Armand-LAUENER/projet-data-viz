@@ -28,9 +28,20 @@ def validate() -> None:
           f"(ONISR ref 3193) | metro+overseas = {killed_all} (ref 3432)")
 
 
+def _write_snapshot_meta() -> None:
+    """Persist the snapshot date into processed/ so it ships with the app."""
+    import json
+    manifest = C.RAW_DIR / "MANIFEST.json"
+    date = "n/a"
+    if manifest.exists():
+        date = json.loads(manifest.read_text()).get("_downloaded", "n/a")
+    (C.PROCESSED_DIR / "snapshot.txt").write_text(date + "\n")
+
+
 def main() -> None:
     print("Building aggregated tables...")
     aggregate.write_all()
+    _write_snapshot_meta()
     validate()
     total = sum(p.stat().st_size for p in C.PROCESSED_DIR.glob("*.parquet"))
     print(f"processed/ total size: {total / 1e6:.2f} MB")
