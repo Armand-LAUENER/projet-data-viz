@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Environments
+.venv/
+.python-version
+
+# Streamlit
+.streamlit/secrets.toml
+
+# OS / IDE
+.DS_Store
+.idea/
+*.log
+
+# Keep the committed data snapshot (small, filtered Parquet).
+# Raw bulk downloads, if any, are ignored:
+data/raw/
