@@ -1,49 +1,45 @@
-"""Section 0 — Intro: the hook and the definition (what the ratio measures)."""
+"""Section 0 — Intro: the hook and the definitions."""
 
 from __future__ import annotations
 
 import streamlit as st
 
 from utils import constants as C
-from utils import prep
+from utils import io
 
 
-def render(raw, f) -> None:
-    tr = prep.tax_ratio(raw)
-    cur = tr[tr["year"] == f.ref_year]
-    fr = cur.loc[cur["geo"] == f.focal, "ratio"]
-    eu = cur.loc[cur["geo"] == C.EU_AGGREGATE, "ratio"]
-    gap = cur.loc[cur["geo"] == f.focal, "gap_vs_eu"]
-    focal_name = C.COUNTRY_NAMES[f.focal]
+def render(f) -> None:
+    dep = io.load_table("by_dep")
+    killed_last = int(dep[dep["year"] == C.LAST_YEAR]["killed"].sum())
+    per_day = killed_last / 365
 
     st.header("The hook")
-    if len(fr) and len(eu):
-        st.subheader(
-            f"In {f.ref_year}, {focal_name} raised **{fr.iloc[0]:.1f}% of GDP** in taxes "
-            f"and social contributions — about **{gap.iloc[0]:+.1f} points** versus the "
-            f"EU27 average of {eu.iloc[0]:.1f}%."
-        )
+    st.subheader(
+        f"In {C.LAST_YEAR}, **{killed_last:,} people** were killed on the roads of "
+        f"metropolitan France — about **{per_day:.0f} every day**.".replace(",", " ")
+    )
     st.markdown(
-        "That headline is real — but *“tax champion”* hides more than it reveals. "
-        "This page unpacks **how big the gap is, when it opened, and what it is made of.**"
+        "But a death is not a random event. It clusters in **specific hours, places "
+        "and road-user profiles**. The thread of this page: **where accidents are most "
+        "frequent is not where they are most deadly.**"
     )
 
-    with st.expander("Definition — what exactly is this ratio?", expanded=False):
+    with st.expander("Definitions — how to read these numbers", expanded=False):
         st.markdown(
             """
-**Tax-to-GDP ratio** = total government revenue from **taxes** (on production,
-income, wealth and capital) **plus net social contributions**, divided by GDP.
+- **Data**: *BAAC* — a form filled by the police for every injury accident, published
+  by the **ONISR** on data.gouv.fr. Four tables (accidents, locations, vehicles, road
+  users) joined on the accident id.
+- **Killed**: a person who died on the spot or **within 30 days** of the accident.
+  This is the reliable indicator; hospitalised-injury counts broke in 2018 and are not
+  used for trends (see the data-quality section).
+- **Gravity index** = *people killed per 100 injury accidents*. It lets us compare
+  hours, places and modes **without any external denominator** (no population, no km).
+- **Scope**: metropolitan France, 2019–2024 (the homogeneous data format). Overseas
+  territories are excluded for comparability with ONISR headline figures.
 
-- Source: **Eurostat**, *Main national accounts tax aggregates* (`gov_10a_taxag`),
-  sector **S13_S212** (general government + EU institutions), expressed in **% of GDP**.
-- One source, one definition, for every country — so comparisons are fair.
-- A high ratio reflects a **choice about how to finance public spending**
-  (publicly vs. privately); it is **not** a measure of how much a given household pays,
-  nor of whether public money is well spent.
-
-> Note on definitions: national sources can differ. The French INSEE publishes a
-> slightly different “compulsory levies” figure because its scope differs from
-> Eurostat's. We stay with Eurostat throughout and never mix the two.
+> What this page can't say: it has **no exposure** (km travelled per mode), so it never
+> ranks modes by risk per trip — only compares shares and severity.
             """
         )
     st.divider()

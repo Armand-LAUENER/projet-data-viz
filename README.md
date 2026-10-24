@@ -1,98 +1,81 @@
-# The French tax exception? — a data story on tax-to-GDP in Europe
+# When does a road accident turn deadly? — a data story on French road safety
 
-An interactive Streamlit data story that asks a question many people think they
-already know the answer to: **is France really a tax outlier in Europe — and
-what is the gap actually made of?** It uses Eurostat's national-accounts tax
-aggregates (1995–2025, ~30 countries) and lets the reader explore the answer
-rather than take it on faith.
+An interactive Streamlit data story on the French road-accident database (BAAC,
+ONISR). It follows one thread: **where and when accidents are most *frequent* is
+not where and when they are most *deadly*.** The reader explores that contrast
+across time, geography and road-user profiles.
 
 - **Repository:** https://github.com/Armand-LAUENER/projet-data-viz
-- **Live app:** https://projet-data-viz-fqbofjrosdu4xcvokeyvsb.streamlit.app/
+- **Live app:** _<add Streamlit Community Cloud URL after deployment>_
 - **Demo video (2–4 min):** _<add link>_
 - **Storyboard:** [`STORYBOARD.md`](STORYBOARD.md)
 
 > The app is **descriptive**: it compares and decomposes. It makes **no causal
-> claim** and no political judgement, and it says explicitly what the data
-> cannot tell us.
+> claim**, evaluates **no policy**, and — having no exposure data (km travelled) —
+> **never ranks modes by risk per trip**. Only aggregates are deployed (ethics).
 
 ---
 
 ## 1. Question & audience
 
-- **Central question:** Is France a genuine tax exception in Europe, and which
-  components explain the gap with the EU average?
-- **Audience:** a curious, non-specialist reader (citizen or student) who has
-  heard *"France is Europe's tax champion"* and wants to know what that means.
-  Hence: plain vocabulary, definitions in tooltips, no visible SEC 2010 jargon.
-- **Narrative arc:** Hook → Context (definition) → Insights (rank, trend,
-  composition) → Implications (what we can and cannot conclude).
+- **Central question:** when, where and for whom does a road accident turn deadly?
+- **Thread:** the contrast between **frequency** and **severity**, measured by the
+  **gravity index** = *people killed per 100 injury accidents* (a single-source metric
+  that needs no population or distance denominator).
+- **Audience:** a general audience, especially **young drivers and vulnerable road
+  users**. Plain language, definitions in tooltips, no BAAC codes on screen.
 
-## 2. What the data show (headline findings, 2024)
+## 2. What the data show (metropolitan France, 2024)
 
-The analysis was driven by the data, not the other way around. The working
-hypothesis was that the French gap comes *mainly* from social contributions.
-**The data only partly confirm it** — which makes for a more honest story:
+Hypotheses were tested, not assumed — and the data reshaped the story:
 
-- France raises **45.3 % of GDP** in taxes + social contributions, **rank 2 of
-  27** (behind Denmark 45.5, ahead of Belgium 45.2) — matching Eurostat's
-  official top three.
-- The gap with the EU27 average (40.2 %) is **+5.1 points**, and it is
-  **structural**: visible across the whole 1995– period, not a recent spike.
-- **The gap is two blocs, not one.** Decomposed by category (FR − EU27, 2024):
-
-  | Category | FR − EU27 gap |
-  |---|---|
-  | Taxes on production & imports | **+2.8 pts** |
-  | Net social contributions | **+2.6 pts** |
-  | Capital taxes | +0.4 pts |
-  | Current taxes on income & wealth | **−0.7 pts** |
-
-  So the "tax champion" label is really about **how social spending is
-  financed** (social contributions *and* production taxes), while French income
-  & wealth taxes sit **at or below** the EU average.
+- **Frequency ≠ severity (the spine).** Only **37 % of accidents** happen outside
+  built-up areas, but **68 % of deaths** do. Across departments, accident count and
+  gravity index are **negatively correlated (−0.58)**: dense urban departments (Paris
+  0.7 killed/100) have many minor accidents; sparse rural ones (Dordogne, Jura ≈ 21)
+  have few but deadly ones. **The map inverts.**
+- **Night is the deadly multiplier.** Gravity index at night (22h–6h) is **9.8** vs
+  **5.7** in daytime — nearly double, for far fewer accidents.
+- **Who dies is not who you'd guess.** Powered two-wheelers are **22 % of deaths**
+  (far above their traffic share); e-scooters are the mirror image (many injuries, few
+  deaths); deaths peak twice by age — **18–24** (521) and **75+** (551).
 
 ## 3. Data
 
 | | |
 |---|---|
-| Dataset | Eurostat — *Main national accounts tax aggregates* |
-| Code / DOI | `gov_10a_taxag` · DOI [`10.2908/gov_10a_taxag`](https://doi.org/10.2908/gov_10a_taxag) |
-| Coverage | 1995–2025, EU27 + aggregates + IS/NO/CH, annual |
-| Unit used | **% of GDP** (`PC_GDP`); € million (`MIO_EUR`) for the "who collects" shares |
-| Licence | **CC BY 4.0** (Eurostat reuse policy) |
-| Snapshot | see the dated file in [`data/`](data/) |
+| Dataset | ONISR — *Bases de données annuelles des accidents corporels (BAAC)* |
+| Portal | **data.gouv.fr** (dataset id `53698f4ca3a729239d2036df`) |
+| Producer | ONISR (Observatoire national interministériel de la sécurité routière) |
+| Structure | 4 tables (caractéristiques, lieux, véhicules, usagers) joined on the accident id |
+| Perimeter | **2019–2024, metropolitan France** (homogeneous format) |
+| Licence | **Licence Ouverte / Etalab 2.0** |
 
 **Citation**
 
 ```
-Source: Eurostat, Main national accounts tax aggregates (gov_10a_taxag),
-DOI 10.2908/gov_10a_taxag, accessed 2026-10-24.
-Modified data: filtering, category grouping and derived calculations by the author.
+Source: ONISR — Bases de données annuelles des accidents corporels de la circulation
+routière, années 2005 à 2024, data.gouv.fr, Licence Ouverte / Etalab 2.0, accessed 2026-10-24.
+Reprocessed by the author: harmonisation, joins, aggregation.
 ```
 
 ## 4. Method
 
-Every analytical choice is documented so the numbers are reproducible.
+- **Perimeter 2019–2024, metropolitan France** (overseas excluded for comparability).
+  Metropolitan = 2-char department code (incl. Corsica `2A`/`2B`).
+- **Four tables joined** on the accident id. Two traps handled (all tested):
+  - the accident key is **`Accident_Id` in caract 2022**, `Num_Acc` elsewhere → harmonised;
+  - **`lieux` has several rows per accident** in some years → de-duplicated so the
+    users×context join never inflates counts;
+  - users↔vehicles joined on the **vehicle key** (not on the accident id alone).
+- **Gravity index** = killed / 100 injury accidents — the frequency-vs-severity metric.
+- **Derived**: weekday, hour, season, age band, **mode of transport** (grouping of
+  `catv` + pedestrians), metropolitan flag, region.
+- **Deaths only for comparisons** (the 30-day indicator); hospitalised-injury counts
+  broke in 2018 and are never used for trends.
 
-- **Sector = `S13_S212`** (general government + EU institutions). Chosen because
-  it reproduces the official headline figures exactly (FR 2024 = 45.3 %,
-  EU 2023 = 39.9 %); the alternative `S13` under-reports by ~0.2–0.3 pt. The
-  sector is **fixed for every country** — comparisons are always like-for-like.
-- **Headline indicator = `D2_D5_D91_D61_M_D995`** (taxes + net social
-  contributions − uncollectable amounts) = the tax-to-GDP ratio.
-- **Four reader-friendly categories**, each one Eurostat `na_item`:
-  `D2` production & imports, `D5` income & wealth, `D91` capital,
-  `D61` net social contributions. `D995` (uncollectable) is subtracted, not
-  shown. The four categories − `D995` reconcile with the total (tested).
-- **EU reference = `EU27_2020`** over the whole series (stable 27-member
-  definition, UK excluded from 1995) so composition never changes mid-series.
-- **Derived variables:** `gap_vs_eu` (country − EU, pts), `rank` (within EU27),
-  `share_of_total` (category share), subsector shares, `is_provisional`.
-- **One source only.** INSEE's "compulsory levies" figure differs by scope; we
-  never mix INSEE and Eurostat in the same chart.
-
-See [`utils/prep.py`](utils/prep.py) for the exact transformations and
-[`utils/constants.py`](utils/constants.py) for every code → label mapping.
+See [`utils/prep.py`](utils/prep.py) (joins & features), [`utils/aggregate.py`](utils/aggregate.py)
+(aggregated tables) and [`utils/constants.py`](utils/constants.py) (every code → label).
 
 ## 5. Run the project
 
@@ -100,69 +83,63 @@ See [`utils/prep.py`](utils/prep.py) for the exact transformations and
 git clone https://github.com/Armand-LAUENER/projet-data-viz.git
 cd projet-data-viz
 
-# with uv (recommended)
 uv sync --extra dev        # or: make install
-make data                  # optional: refresh the Eurostat snapshot
+make data                  # optional: re-download the raw CSVs (data/processed is committed)
+make tables                # optional: rebuild the aggregates
 make run                   # streamlit run app.py
-make test                  # 5 targeted tests
-
-# without uv
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-streamlit run app.py
+make test                  # 7 targeted tests
 ```
 
-The app reads the **local snapshot** in `data/`, never the network, so the demo
-and the grading run always show the same figures.
+The app reads the **committed aggregated tables** in `data/processed/` (~60 kB) — no
+network, no individual records, same figures in the demo and at grading.
 
 ## 6. Code structure
 
 ```
-app.py                 entry point: page config, sidebar, KPI header, sections
-sections/              one module per narrative step (intro → conclusions)
+app.py                 entry point: sidebar, KPI header, sections
+sections/              intro · when · where · who · conditions · quality · conclusions
 utils/
-  io.py                load the snapshot (st.cache_data lives here)
-  prep.py              pure, tested pandas transformations
+  io.py                load aggregated tables + basemap (st.cache_data)
+  prep.py              pure, tested: read → harmonise → join → derive features
+  aggregate.py         build the pre-aggregated Parquet tables
   viz.py               unified Plotly chart factory
-  constants.py         codes, category/ISO mappings, accessible palette
-scripts/download_data.py   Eurostat → dated Parquet snapshot
-data/                  committed, filtered snapshot (a few hundred kB)
-tests/test_prep.py     duplicates, sum coherence, official-figure reproduction, ISO map
+  constants.py         BAAC code labels, mode grouping, dep→region, palette
+scripts/
+  download_data.py     data.gouv API → data/raw/ + MANIFEST (dated snapshot)
+  build_tables.py      data/raw → data/processed (aggregates) + validation
+data/processed/        committed aggregates (the only data the app serves)
+assets/departements.geojson   departments basemap (see §9)
+tests/test_prep.py     key uniqueness, no join inflation, ONISR reproduction, labels
 ```
 
-## 7. Data quality & limitations
+## 7. Data quality & validation
 
-Shown transparently inside the app (section 5):
+Shown in-app (section 5):
 
-- **Completeness** ~99 %; the most recent year (2025) is only partly reported
-  (22/34 geographies) and flagged provisional.
-- **0 duplicates** on the natural key; category sums reconcile to within 0.2 pt.
-- **Denominator effect:** a ratio can rise because GDP falls (2009, 2020) with
-  no tax increase — crisis years are shaded on the time series.
-- **Revisions:** EU27 2024 reads 40.2 % here vs. 40.4 % in Eurostat's Oct-2025
-  release — a revision between that release and this snapshot, documented, not
-  hidden.
-- **Scope:** a % of GDP is not a personal tax rate and says nothing about
-  whether public money is well spent.
+- **Reproduces ONISR 2024 exactly**: killed metropolitan = **3193** (ref 3193),
+  metro+overseas = 3432, male share of the killed = 77 % (ref 77 %).
+- **0 duplicate accident ids**, **0 orphan users**; gravity index within a sane range.
+- **Honest artefacts**: age/sex missingness rises from 2021 (hit-and-run offenders
+  added); injury counts are *not* reproducible (ONISR corrects them separately); not all
+  accidents are geolocated (department totals used, no point map); 2020 COVID distortion.
 
-## 8. Accessibility
+## 8. Ethics & privacy
 
-Colourblind-safe palettes (Cividis map, Okabe-Ito lines); information is never
-carried by colour alone (direct labels + reference lines); every axis has a unit;
-each chart has a one-sentence `st.caption` alt text; charts render with
-`theme="streamlit"` so they adapt to light and dark.
+Deaths involve real people. Safeguards (section 5 + here): **only aggregates deployed**;
+**no point map** of fatal accidents with date/age/sex; **suppression threshold** (cells
+with < 5 deaths masked in age × sex); sober tone; reminder that the victim mix also
+reflects exposure, which is unknown here.
 
-## 9. Possible extensions
-
-Break `D2` down (VAT vs. other production taxes); add a household-level view from
-a different dataset; extend beyond the EU with OECD data (different definitions).
-
-## 10. Licences
+## 9. Licences & the basemap
 
 - **Code:** MIT (see [`LICENSE`](LICENSE)).
-- **Data:** © European Union, Eurostat — **CC BY 4.0**. The two are distinct.
+- **Data:** ONISR / BAAC — **Licence Ouverte / Etalab 2.0** (distinct from the code).
+- **Basemap:** `assets/departements.geojson` (simplified departments, from the
+  open `france-geojson` project) is a **map background, not analytical data** — all
+  values come from the BAAC. A 100 % single-source alternative (density map from the
+  BAAC coordinates) is possible if an external basemap is not accepted.
 
 ## Notes for the demo / grading
 
-Streamlit Community Cloud apps **hibernate** after inactivity — open the app once
-a few minutes before the demo or grading so it is awake.
+Streamlit Community Cloud apps hibernate — open the app a few minutes before the demo or
+grading so it is awake.

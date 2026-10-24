@@ -1,126 +1,134 @@
-"""Central registry of codes, labels, groupings and colours.
+"""BAAC code labels, groupings, geography and colours.
 
-Everything that maps an Eurostat code to something a non-specialist reader can
-understand lives here, so the rest of the app never has to know about SEC 2010
-vocabulary. See README (section "Method") for why each choice was made.
+Everything that turns an ONISR/BAAC numeric code into something a non-specialist
+reader understands lives here, so no SEC-like jargon ever reaches the UI.
+Codes follow the ONISR "Description des bases de données annuelles" (2019+ format).
 """
 
 from __future__ import annotations
 
+from pathlib import Path
+
 # --- Dataset identity ------------------------------------------------------
-DATASET_CODE = "gov_10a_taxag"
-DATASET_DOI = "10.2908/gov_10a_taxag"
-DATASET_TITLE = "Main national accounts tax aggregates"
+DATASET_ID = "53698f4ca3a729239d2036df"
+DATASET_TITLE = "Bases de données annuelles des accidents corporels (BAAC)"
+PRODUCER = "ONISR"
+LICENCE = "Licence Ouverte / Etalab 2.0"
+DATASET_URL = (
+    "https://www.data.gouv.fr/datasets/bases-de-donnees-annuelles-des-accidents-"
+    "corporels-de-la-circulation-routiere-annees-de-2005-a-2024"
+)
 
-# --- Core analytical choices (validated in Phase 1, see README) ------------
-# Sector S13_S212 (general government + EU institutions) is the one that
-# reproduces the official Eurostat headline figures (FR 2024 = 45.3 %,
-# EU 2023 = 39.9 %). We keep it fixed for every country and never mix it with
-# S13 alone.
-SECTOR_MAIN = "S13_S212"
+# --- Perimeter -------------------------------------------------------------
+YEARS = list(range(2019, 2025))   # homogeneous 2019+ format
+LAST_YEAR = 2024                  # last complete published year
+TABLES = ["caracteristiques", "lieux", "vehicules", "usagers"]
+CONFIDENTIALITY_MIN = 5           # mask crossed cells with fewer than N killed
 
-# Subsectors for the "who collects?" section.
-SUBSECTORS = {
-    "S1311": "Central government",
-    "S1313": "Local government",
-    "S1314": "Social security funds",
+# --- Paths -----------------------------------------------------------------
+ROOT = Path(__file__).resolve().parent.parent
+RAW_DIR = ROOT / "data" / "raw"
+PROCESSED_DIR = ROOT / "data" / "processed"
+GEOJSON = ROOT / "assets" / "departements.geojson"
+
+# --- Code labels (plain language) ------------------------------------------
+GRAV_LABELS = {1: "Unharmed", 2: "Killed", 3: "Hospitalised", 4: "Slight injury"}
+SEXE_LABELS = {1: "Male", 2: "Female", -1: "Unknown"}
+AGG_LABELS = {1: "Outside built-up area", 2: "Built-up area"}
+LUM_LABELS = {
+    1: "Daylight", 2: "Dawn/dusk", 3: "Night, no lighting",
+    4: "Night, lighting off", 5: "Night, lighting on",
+}
+ATM_LABELS = {
+    -1: "Unknown", 1: "Normal", 2: "Light rain", 3: "Heavy rain", 4: "Snow/hail",
+    5: "Fog/smoke", 6: "Strong wind", 7: "Dazzling", 8: "Overcast", 9: "Other",
+}
+CATU_LABELS = {1: "Driver", 2: "Passenger", 3: "Pedestrian"}
+CATR_LABELS = {
+    1: "Motorway", 2: "National road", 3: "Departmental road", 4: "Local road",
+    5: "Off public network", 6: "Car park", 7: "Urban metropolis road", 9: "Other",
 }
 
-# Total tax burden (taxes + net social contributions, minus uncollectable):
-# this is the "tax-to-GDP ratio" headline indicator.
-NA_TOTAL = "D2_D5_D91_D61_M_D995"
-# Taxes only (no social contributions) -- used for the "taxes alone" comparison.
-NA_TAXES_ONLY = "D2_D5_D91"
-
-# --- Reference unit --------------------------------------------------------
-UNIT_PC_GDP = "PC_GDP"
-UNIT_MIO = "MIO_EUR"
-
-# --- Category grouping (4 buckets a citizen can reason about) --------------
-# Each bucket maps to a single Eurostat na_item code. D995 (amounts assessed
-# but unlikely to be collected) is subtracted from the total, not shown as a
-# category. The four categories + the D995 correction sum to NA_TOTAL
-# (checked in tests/test_prep.py).
-CATEGORY_CODES = {
-    "D2": "Taxes on production & imports",
-    "D5": "Current taxes on income & wealth",
-    "D91": "Capital taxes",
-    "D61": "Net social contributions",
+# --- Mode of transport (grouping of catv + pedestrians) --------------------
+# Pedestrians are detected from catu==3 before catv is read.
+CATV_TO_MODE = {
+    1: "Bicycle", 80: "Bicycle",                         # incl. e-bike
+    50: "E-scooter / PMD", 60: "E-scooter / PMD",
+    2: "Powered two-wheeler", 30: "Powered two-wheeler", 31: "Powered two-wheeler",
+    32: "Powered two-wheeler", 33: "Powered two-wheeler", 34: "Powered two-wheeler",
+    41: "Powered two-wheeler", 42: "Powered two-wheeler", 43: "Powered two-wheeler",
+    3: "Car", 7: "Car", 8: "Car", 9: "Car",
+    10: "Light goods vehicle", 11: "Light goods vehicle", 12: "Light goods vehicle",
+    13: "Heavy goods vehicle", 14: "Heavy goods vehicle", 15: "Heavy goods vehicle",
+    16: "Heavy goods vehicle", 17: "Heavy goods vehicle",
+    37: "Bus/coach", 38: "Bus/coach",
+    35: "Quad/other", 36: "Quad/other", 39: "Quad/other", 40: "Quad/other",
 }
-CATEGORY_ORDER = [
-    "Taxes on production & imports",
-    "Current taxes on income & wealth",
-    "Capital taxes",
-    "Net social contributions",
+MODE_PEDESTRIAN = "Pedestrian"
+MODE_ORDER = [
+    "Pedestrian", "Bicycle", "E-scooter / PMD", "Powered two-wheeler",
+    "Car", "Light goods vehicle", "Heavy goods vehicle", "Bus/coach", "Quad/other",
 ]
-NA_UNCOLLECTABLE = "D995"  # subtracted to reconcile the sum with the total
+# Vulnerable road users (highlighted in the "who" section).
+VULNERABLE_MODES = ["Pedestrian", "Bicycle", "E-scooter / PMD", "Powered two-wheeler"]
 
-# na_item codes we pull from Eurostat (keeps the snapshot small).
-NA_ITEMS_USED = [NA_TOTAL, NA_TAXES_ONLY, *CATEGORY_CODES, NA_UNCOLLECTABLE]
+# --- Age bins --------------------------------------------------------------
+AGE_BINS = [0, 14, 18, 25, 35, 45, 55, 65, 75, 200]
+AGE_LABELS = ["0-13", "14-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65-74", "75+"]
+
+# --- Missing-value sentinels ----------------------------------------------
+MISSING_CODES = {-1, "-1", "", " "}
 
 # --- Geography -------------------------------------------------------------
-EU_AGGREGATE = "EU27_2020"  # stable 27-member definition over the whole series
-EU_LABEL = "EU27"
+def is_metropolitan(dep: str) -> bool:
+    """Metropolitan departments are 2-char codes (01-95, 2A, 2B); overseas are 3-digit."""
+    return isinstance(dep, str) and len(dep) == 2
 
-# The 27 EU member states (Eurostat geo codes; note EL = Greece).
-EU27_MEMBERS = [
-    "BE", "BG", "CZ", "DK", "DE", "EE", "IE", "EL", "ES", "FR",
-    "HR", "IT", "CY", "LV", "LT", "LU", "HU", "MT", "NL", "AT",
-    "PL", "PT", "RO", "SI", "SK", "FI", "SE",
-]
-NON_EU = ["IS", "NO", "CH"]  # shown only when the user opts in
-
-# Eurostat geo code -> ISO-3166 alpha-3 (for Plotly choropleth).
-# The single irregular case is EL -> GRC (Eurostat uses EL for Greece).
-EUROSTAT_TO_ISO3 = {
-    "BE": "BEL", "BG": "BGR", "CZ": "CZE", "DK": "DNK", "DE": "DEU",
-    "EE": "EST", "IE": "IRL", "EL": "GRC", "ES": "ESP", "FR": "FRA",
-    "HR": "HRV", "IT": "ITA", "CY": "CYP", "LV": "LVA", "LT": "LTU",
-    "LU": "LUX", "HU": "HUN", "MT": "MLT", "NL": "NLD", "AT": "AUT",
-    "PL": "POL", "PT": "PRT", "RO": "ROU", "SI": "SVN", "SK": "SVK",
-    "FI": "FIN", "SE": "SWE", "IS": "ISL", "NO": "NOR", "CH": "CHE",
+# 96 metropolitan departments -> 13 regions.
+DEP_TO_REGION = {
+    # Auvergne-Rhône-Alpes
+    **{d: "Auvergne-Rhône-Alpes" for d in
+       ["01", "03", "07", "15", "26", "38", "42", "43", "63", "69", "73", "74"]},
+    # Bourgogne-Franche-Comté
+    **{d: "Bourgogne-Franche-Comté" for d in
+       ["21", "25", "39", "58", "70", "71", "89", "90"]},
+    # Bretagne
+    **{d: "Bretagne" for d in ["22", "29", "35", "56"]},
+    # Centre-Val de Loire
+    **{d: "Centre-Val de Loire" for d in ["18", "28", "36", "37", "41", "45"]},
+    # Corse
+    **{d: "Corse" for d in ["2A", "2B"]},
+    # Grand Est
+    **{d: "Grand Est" for d in
+       ["08", "10", "51", "52", "54", "55", "57", "67", "68", "88"]},
+    # Hauts-de-France
+    **{d: "Hauts-de-France" for d in ["02", "59", "60", "62", "80"]},
+    # Île-de-France
+    **{d: "Île-de-France" for d in ["75", "77", "78", "91", "92", "93", "94", "95"]},
+    # Normandie
+    **{d: "Normandie" for d in ["14", "27", "50", "61", "76"]},
+    # Nouvelle-Aquitaine
+    **{d: "Nouvelle-Aquitaine" for d in
+       ["16", "17", "19", "23", "24", "33", "40", "47", "64", "79", "86", "87"]},
+    # Occitanie
+    **{d: "Occitanie" for d in
+       ["09", "11", "12", "30", "31", "32", "34", "46", "48", "65", "66", "81", "82"]},
+    # Pays de la Loire
+    **{d: "Pays de la Loire" for d in ["44", "49", "53", "72", "85"]},
+    # Provence-Alpes-Côte d'Azur
+    **{d: "Provence-Alpes-Côte d'Azur" for d in ["04", "05", "06", "13", "83", "84"]},
 }
+REGIONS = sorted(set(DEP_TO_REGION.values()))
 
-# Human-readable country names.
-COUNTRY_NAMES = {
-    "BE": "Belgium", "BG": "Bulgaria", "CZ": "Czechia", "DK": "Denmark",
-    "DE": "Germany", "EE": "Estonia", "IE": "Ireland", "EL": "Greece",
-    "ES": "Spain", "FR": "France", "HR": "Croatia", "IT": "Italy",
-    "CY": "Cyprus", "LV": "Latvia", "LT": "Lithuania", "LU": "Luxembourg",
-    "HU": "Hungary", "MT": "Malta", "NL": "Netherlands", "AT": "Austria",
-    "PL": "Poland", "PT": "Portugal", "RO": "Romania", "SI": "Slovenia",
-    "SK": "Slovakia", "FI": "Finland", "SE": "Sweden",
-    "IS": "Iceland", "NO": "Norway", "CH": "Switzerland",
-    EU_AGGREGATE: "EU27",
-}
+# --- Colours (colourblind-safe, sober tone for a sensitive topic) ----------
+SEQ_SCALE = "Cividis"          # maps and heatmaps
+COLOR_KILLED = "#B22222"       # deaths: restrained dark red
+COLOR_ACCIDENTS = "#0072B2"    # accident counts: blue
+COLOR_GRAVITY = "#D55E00"      # gravity index: orange
+COLOR_REF = "#888888"
+OKABE_ITO = ["#0072B2", "#E69F00", "#009E73", "#D55E00",
+             "#CC79A7", "#56B4E9", "#F0E442", "#000000", "#999999"]
+MODE_COLORS = dict(zip(MODE_ORDER, OKABE_ITO))
 
-FOCAL_DEFAULT = "FR"
-COMPARE_DEFAULT = ["FR", "DE", "IT", "ES", "SE"]
-
-# --- Colours (colourblind-safe) --------------------------------------------
-# Okabe-Ito qualitative palette for country lines; information is never carried
-# by colour alone (direct labels + reference lines everywhere).
-OKABE_ITO = [
-    "#0072B2", "#E69F00", "#009E73", "#D55E00",
-    "#CC79A7", "#56B4E9", "#F0E442", "#000000",
-]
-COLOR_FOCAL = "#D55E00"   # France / focal country: warm, high-contrast
-COLOR_EU = "#0072B2"      # EU reference: blue
-COLOR_OTHER = "#999999"   # de-emphasised comparison countries
-
-# Diverging colours for the category grouping (stable across the app).
-CATEGORY_COLORS = {
-    "Taxes on production & imports": "#0072B2",
-    "Current taxes on income & wealth": "#E69F00",
-    "Capital taxes": "#CC79A7",
-    "Net social contributions": "#009E73",
-}
-
-# Crisis bands annotated on time series (denominator effect, see README).
-CRISIS_EVENTS = [
-    (2008, 2009, "Financial crisis"),
-    (2020, 2020, "COVID-19"),
-]
-
-# Last fully complete year (2025 is partial: 22/34 geographies as of snapshot).
-LAST_COMPLETE_YEAR = 2024
+# Crisis / break annotations on time series.
+COVID_YEAR = 2020

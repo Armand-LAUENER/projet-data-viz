@@ -16,6 +16,7 @@ __pycache__/
 .idea/
 *.log
 
-# Keep the committed data snapshot (small, filtered Parquet).
-# Raw bulk downloads, if any, are ignored:
+# Raw BAAC CSVs are large and re-downloadable via scripts/download_data.py.
+# The small aggregated tables in data/processed/ ARE committed.
 data/raw/
+!data/processed/

@@ -1,7 +1,7 @@
 [project]
-name = "streamlit-tax-europe"
+name = "streamlit-road-safety"
 version = "0.1.0"
-description = "Data storytelling dashboard on tax-to-GDP ratios in Europe (Eurostat gov_10a_taxag)"
+description = "Data story on French road accidents: when, where and for whom crashes turn deadly (ONISR/BAAC)"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 authors = [{ name = "Armand Lauener" }]
@@ -10,7 +10,6 @@ dependencies = [
     "pandas>=2.2,<3.0",
     "plotly>=5.24,<6.0",
     "pyarrow>=17.0",
-    "eurostat>=1.0.4",
 ]
 
 [project.optional-dependencies]

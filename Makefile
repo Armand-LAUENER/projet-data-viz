@@ -1,13 +1,13 @@
-.PHONY: install data run test lint clean
-
-# Uses uv (one venv per project). Fallbacks to plain python if uv is absent.
-RUN := $(shell command -v uv >/dev/null 2>&1 && echo "uv run" || echo "python -m")
+.PHONY: install data tables run test lint clean
 
 install:            ## create the environment and install dependencies
 	uv sync --extra dev
 
-data:               ## refresh the dated Eurostat snapshot in data/
+data:               ## download the raw BAAC CSVs into data/raw/ (+ MANIFEST)
 	uv run python scripts/download_data.py
+
+tables:             ## build the aggregated Parquet tables in data/processed/
+	uv run python scripts/build_tables.py
 
 run:                ## launch the Streamlit app
 	uv run streamlit run app.py
@@ -15,5 +15,8 @@ run:                ## launch the Streamlit app
 test:               ## run the targeted test suite
 	uv run pytest -q
 
+lint:               ## static checks
+	uvx ruff check .
+
 clean:              ## remove caches
-	rm -rf .pytest_cache **/__pycache__ .streamlit/cache
+	rm -rf .pytest_cache .ruff_cache **/__pycache__

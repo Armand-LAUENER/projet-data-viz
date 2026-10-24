@@ -1,75 +1,69 @@
-# Storyboard — The French tax exception?
+# Storyboard — When does a road accident turn deadly?
 
 > Produced before the code. Each panel = one insight sentence, one visual, one
-> interaction, and the one question it answers. A chart that answers no question
-> is cut. Insight sentences are written from what Phase 1 actually showed.
+> interaction, one question. A chart that answers no question is cut. Insight
+> sentences were finalised after Phase 1 exploration, from what the data showed.
 
-**Audience:** curious non-specialist who has heard "France is Europe's tax
-champion". **Question:** is France a real tax outlier, and what is the gap made of?
+**Audience:** general public, esp. young drivers & vulnerable users.
+**Question:** when, where and for whom does an accident turn deadly?
+**Thread:** frequency ≠ severity (gravity index = killed per 100 accidents).
 
 ---
 
 ### Panel 0 — Intro (Hook + Context)
-- **Insight:** "In 2024 France raised 45.3 % of GDP in taxes & contributions,
-  ~+5 points above the EU27 average."
-- **Visual:** KPI header (focal ratio, EU27 avg, gap, rank) + accroche text +
-  a collapsible **Definition** box.
-- **Interaction:** none (sets the frame).
-- **Answers:** Why does this matter? What exactly is measured?
+- **Insight:** "In 2024, 3 193 people were killed on metropolitan roads — ~9 a day."
+- **Visual:** KPI header (accidents, killed, gravity index, % deaths outside town) +
+  collapsible **Definitions** box.
+- **Interaction:** global filters (years).
+- **Answers:** why it matters; how to read the numbers.
 
-### Panel 1 — Where does each country stand?
-- **Insight:** "France has the 2nd highest ratio in the EU27."
-- **Visual:** choropleth of Europe (Cividis) **+** horizontal ranking bars with
-  the EU27 average as a reference line; France highlighted.
-- **Interaction:** reference-year slider; metric switch (total ↔ one category);
-  include non-EU toggle.
-- **Answers:** What is each country's relative level?
+### Panel 1 — When?
+- **Insight:** "Accidents peak at rush hour, but a night accident is far deadlier
+  (≈9.8 vs 5.7 killed/100)."
+- **Visual:** hour × weekday **heatmap** + monthly **seasonality** curve.
+- **Interaction:** metric toggle (Accidents / Killed / Gravity index); years.
+- **Answers:** when is the risk highest?
 
-### Panel 2 — How did we get here?
-- **Insight:** "The France–EU27 gap is structural, visible since 1995" (exact
-  verb — widened / narrowed / stable — set from the data for the chosen period).
-- **Visual:** multi-country line chart (France vs EU27 vs selected) **+** a
-  dedicated gap line (country − EU), zero line, extremes annotated. Crisis bands
-  mark 2008–09 and 2020.
-- **Interaction:** country multiselect; period slider.
-- **Answers:** Is the gap recent or long-standing?
+### Panel 2 — Where?
+- **Insight:** "The map inverts: the departments with the most accidents are the
+  least deadly per accident (corr −0.58)."
+- **Visual:** department **choropleth** + built-up-vs-outside **share bars**.
+- **Interaction:** metric toggle; region multiselect; years.
+- **Answers:** where are accidents most deadly?
 
-### Panel 3 — What is the gap made of?
-- **Insight:** "Most of the gap comes from production taxes **and** social
-  contributions — not from income & wealth taxes (below EU average)."
-- **Visual:** stacked bars by category (FR vs EU vs selected) **+** small
-  multiples, one panel per category, shared Y scale **+** a decomposition table.
-- **Interaction:** countries compared; reference year.
-- **Answers:** Which component explains the gap?
+### Panel 3 — Who?
+- **Insight:** "Powered two-wheelers are ~22 % of deaths; e-scooters the mirror
+  image; deaths peak at 18–24 and 75+."
+- **Visual:** **dumbbell** (share of victims vs share of deaths by mode) + **age
+  pyramid** of the killed by sex.
+- **Interaction:** mode multiselect; years.
+- **Answers:** who pays the heaviest toll?
 
-### Panel 4 — Who collects? *(bonus)*
-- **Insight:** "In France, social security funds collect ~54 % of all receipts."
-- **Visual:** 100 %-stacked bars by subsector (central / local / social security).
-- **Interaction:** countries compared; reference year.
-- **Answers:** Who actually receives the money?
+### Panel 4 — In what conditions? *(bonus)*
+- **Insight:** "Night, open roads and higher speed limits all raise the share that kill."
+- **Visual:** **small multiples** of the gravity index by lighting, weather, road type,
+  speed limit.
+- **Interaction:** none (whole-period view).
+- **Answers:** what conditions aggravate accidents?
 
 ### Panel 5 — Can we trust these numbers?
-- **Insight:** "The series is ~99 % complete; known definition caveats are shown."
-- **Visual:** completeness heatmap (country × year) + duplicate / sum-coherence
-  metrics + a validation table reproducing official figures.
+- **Insight:** "Pipeline reproduces the ONISR figures exactly; known fragilities shown."
+- **Visual:** validation table + missingness heatmap + quality KPIs; **ethics** note.
 - **Interaction:** none.
-- **Answers:** How reliable are these figures?
+- **Answers:** how reliable, and handled how responsibly?
 
 ### Panel 6 — What to take away
 - **Insight:** the three findings restated + what the data cannot say.
-- **Visual:** text recap of key numbers.
-- **Interaction:** none.
-- **Answers:** What should the reader remember — and not over-conclude?
+- **Visual:** text recap.
+- **Answers:** what to remember — and not over-conclude.
 
 ---
 
-**Control → effect map** (every control changes something useful):
+**Control → effect map** (every control changes something):
 
 | Control | Affects |
 |---|---|
-| Period slider | lines, gap line, KPI "since start" delta |
-| Reference-year slider | map, ranking, composition, KPIs, subsectors |
-| Focal country | KPIs, gap line, decomposition, conclusions |
-| Countries compared | lines, stacked bars, small multiples, subsectors |
-| Metric (total/category) | map, ranking |
-| Include non-EU toggle | map, ranking |
+| Years slider | every chart and KPI |
+| Metric (Accidents / Killed / Gravity index) | heatmap + choropleth |
+| Regions multiselect | choropleth + department-based KPIs |
+| Modes multiselect | mode dumbbell |

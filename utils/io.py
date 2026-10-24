@@ -1,43 +1,43 @@
-"""Load the local snapshot. The app never touches the network.
+"""Load the pre-aggregated tables and the basemap. The app never hits the network.
 
-Caching lives here (``st.cache_data``); the transformations in ``prep.py`` stay
-pure pandas so they can be unit-tested without a Streamlit runtime.
+Caching lives here (``st.cache_data``); the transformations in ``aggregate.py``
+and ``prep.py`` stay pure so they can be tested without a Streamlit runtime.
 """
 
 from __future__ import annotations
 
-import re
-from datetime import date
-from pathlib import Path
+import json
 
 import pandas as pd
 import streamlit as st
 
 from utils import constants as C
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-_SNAPSHOT_RE = re.compile(rf"{C.DATASET_CODE}_(\d{{4}}-\d{{2}}-\d{{2}})\.parquet$")
 
-
-def latest_snapshot() -> Path:
-    """Return the most recent dated snapshot in ``data/``."""
-    candidates = sorted(DATA_DIR.glob(f"{C.DATASET_CODE}_*.parquet"))
-    if not candidates:
+@st.cache_data(show_spinner=False)
+def load_table(name: str) -> pd.DataFrame:
+    """Load one processed Parquet table (e.g. 'by_dep')."""
+    path = C.PROCESSED_DIR / f"{name}.parquet"
+    if not path.exists():
         raise FileNotFoundError(
-            "No snapshot found in data/. Run `make data` (or "
-            "`python scripts/download_data.py`) first."
+            f"{path} missing. Run `make data && make tables` first."
         )
-    return candidates[-1]
-
-
-def snapshot_date(path: Path | None = None) -> date:
-    """Parse the snapshot date from the file name."""
-    path = path or latest_snapshot()
-    m = _SNAPSHOT_RE.search(path.name)
-    return date.fromisoformat(m.group(1)) if m else date.fromtimestamp(path.stat().st_mtime)
+    return pd.read_parquet(path)
 
 
 @st.cache_data(show_spinner=False)
-def load_raw() -> pd.DataFrame:
-    """Load the raw long snapshot (geo, unit, sector, na_item, year, value)."""
-    return pd.read_parquet(latest_snapshot())
+def load_geojson() -> dict:
+    """Metropolitan departments basemap (properties.code == BAAC dep)."""
+    return json.loads(C.GEOJSON.read_text())
+
+
+@st.cache_data(show_spinner=False)
+def snapshot_date() -> str:
+    """Download date recorded in the raw MANIFEST, if present."""
+    manifest = C.RAW_DIR / "MANIFEST.json"
+    if manifest.exists():
+        try:
+            return json.loads(manifest.read_text()).get("_downloaded", "n/a")
+        except json.JSONDecodeError:
+            pass
+    return "n/a"

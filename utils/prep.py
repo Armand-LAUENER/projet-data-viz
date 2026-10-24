@@ -1,12 +1,9 @@
-"""Pure data transformations.
+"""Pure data transformations: raw BAAC CSVs -> tidy analysis frames.
 
-Every function takes the raw long snapshot (as produced by
-``scripts/download_data.py``) and returns a tidy, analysis-ready table. No
-Streamlit, no I/O, no network -- so the logic that the narrative depends on is
-unit-tested in ``tests/test_prep.py``.
-
-Convention: the input ``raw`` has columns
-``[unit, sector, na_item, geo, year, value]``.
+No Streamlit, no network. Reads one year's four tables, harmonises them, joins
+them correctly (the join that must NOT duplicate rows is usagers x vehicules on
+the vehicle key, not on Num_Acc alone), and derives the features the story needs.
+Unit-tested in tests/test_prep.py.
 """
 
 from __future__ import annotations
@@ -16,178 +13,126 @@ import pandas as pd
 from utils import constants as C
 
 
-# --- Building blocks -------------------------------------------------------
-def _pc_gdp_main(raw: pd.DataFrame) -> pd.DataFrame:
-    """Rows in % of GDP for the fixed analytical sector (S13_S212)."""
-    return raw[(raw["unit"] == C.UNIT_PC_GDP) & (raw["sector"] == C.SECTOR_MAIN)]
+# --- Robust reading --------------------------------------------------------
+def read_raw(year: int, table: str) -> pd.DataFrame:
+    """Read one raw BAAC CSV (';'-separated, latin-1, dep kept as string)."""
+    path = C.RAW_DIR / f"{table}_{year}.csv"
+    df = pd.read_csv(path, sep=";", encoding="latin-1", low_memory=False,
+                     dtype={"dep": str, "com": str})
+    df.columns = [c.strip() for c in df.columns]
+    # The accident key is named 'Accident_Id' in some years (e.g. caract 2022).
+    df = df.rename(columns={"Accident_Id": "Num_Acc"})
+    return df
 
 
-def country_name(geo: str) -> str:
-    return C.COUNTRY_NAMES.get(geo, geo)
-
-
-# --- Headline tax-to-GDP ratio --------------------------------------------
-def tax_ratio(raw: pd.DataFrame) -> pd.DataFrame:
-    """Total tax-to-GDP ratio per geo x year, with derived features.
-
-    Columns: geo, year, ratio, country, iso3, is_eu_member, is_provisional,
-    eu_ratio, gap_vs_eu, rank (rank within EU27 members, 1 = highest).
-    """
-    df = _pc_gdp_main(raw)
-    df = df[df["na_item"] == C.NA_TOTAL][["geo", "year", "value"]].copy()
-    df = df.rename(columns={"value": "ratio"})
-
-    df["country"] = df["geo"].map(country_name)
-    df["iso3"] = df["geo"].map(C.EUROSTAT_TO_ISO3)
-    df["is_eu_member"] = df["geo"].isin(C.EU27_MEMBERS)
-    df["is_provisional"] = df["year"] > C.LAST_COMPLETE_YEAR
-
-    # EU reference line and the gap that measures "the French exception".
-    eu = (
-        df[df["geo"] == C.EU_AGGREGATE][["year", "ratio"]]
-        .rename(columns={"ratio": "eu_ratio"})
+def _to_float(series: pd.Series) -> pd.Series:
+    """French decimals use a comma; convert to float."""
+    return pd.to_numeric(
+        series.astype(str).str.replace(",", ".", regex=False).replace({"nan": None}),
+        errors="coerce",
     )
-    df = df.merge(eu, on="year", how="left")
-    df["gap_vs_eu"] = (df["ratio"] - df["eu_ratio"]).round(2)
 
-    # Rank among the 27 member states only (aggregates are not ranked).
-    members = df[df["is_eu_member"]].copy()
-    members["rank"] = (
-        members.groupby("year")["ratio"].rank(ascending=False, method="min").astype(int)
+
+def _hour(hrmn: pd.Series) -> pd.Series:
+    """Extract the hour (0-23) from an 'hh:mm' string."""
+    s = hrmn.astype(str).str.extract(r"^(\d{1,2})")[0]
+    return pd.to_numeric(s, errors="coerce").astype("Int64")
+
+
+def _mode(catu: pd.Series, catv: pd.Series) -> pd.Series:
+    """Map each road user to a plain-language transport mode."""
+    cv = pd.to_numeric(catv, errors="coerce")
+    mode = cv.map(C.CATV_TO_MODE).fillna("Quad/other")
+    mode = mode.where(catu != 3, C.MODE_PEDESTRIAN)  # catu==3 -> pedestrian
+    return mode
+
+
+# --- Usager-level frame (victims & deaths) ---------------------------------
+def build_usager_level(year: int) -> pd.DataFrame:
+    """One enriched row per road user, carrying accident context.
+
+    Columns: Num_Acc, year, month, weekday, hour, lum, atm, catr, vma, dep,
+    region, metro, agg_label, mode, grav, killed, victim, sexe_label, age, age_band.
+    """
+    car = read_raw(year, "caracteristiques")
+    # lieux can carry several rows per accident in some years; keep one (catr/vma
+    # are accident-level attributes) so the join never duplicates users.
+    lie = read_raw(year, "lieux").drop_duplicates("Num_Acc")
+    veh = read_raw(year, "vehicules")
+    usa = read_raw(year, "usagers")
+
+    # Accident context: caracteristiques (+ lieux for road type / speed limit).
+    car = car.rename(columns={"long": "lon"})
+    ctx = car[["Num_Acc", "jour", "mois", "an", "hrmn", "lum", "dep", "agg", "atm"]].copy()
+    ctx = ctx.merge(lie[["Num_Acc", "catr", "vma"]], on="Num_Acc", how="left")
+
+    # Users + vehicle category (join on the VEHICLE key -> no row duplication).
+    rows_before = len(usa)
+    usa = usa.merge(veh[["Num_Acc", "id_vehicule", "catv"]],
+                    on=["Num_Acc", "id_vehicule"], how="left")
+    assert len(usa) == rows_before, "usagers x vehicules join duplicated rows"
+
+    df = usa.merge(ctx, on="Num_Acc", how="left")
+
+    # Derived features.
+    df["year"] = pd.to_numeric(df["an"], errors="coerce").astype("Int64")
+    df["month"] = pd.to_numeric(df["mois"], errors="coerce").astype("Int64")
+    dt = pd.to_datetime(
+        dict(year=df["year"], month=df["month"],
+             day=pd.to_numeric(df["jour"], errors="coerce")),
+        errors="coerce",
     )
-    df = df.merge(members[["geo", "year", "rank"]], on=["geo", "year"], how="left")
-    return df.sort_values(["year", "geo"]).reset_index(drop=True)
+    df["weekday"] = dt.dt.dayofweek            # 0 = Monday
+    df["hour"] = _hour(df["hrmn"])
+    df["metro"] = df["dep"].map(C.is_metropolitan)
+    df["region"] = df["dep"].map(C.DEP_TO_REGION)
+    df["agg_label"] = pd.to_numeric(df["agg"], errors="coerce").map(C.AGG_LABELS)
+    df["mode"] = _mode(df["catu"], df["catv"])
+    df["grav"] = pd.to_numeric(df["grav"], errors="coerce")
+    df["killed"] = (df["grav"] == 2).astype(int)
+    df["victim"] = df["grav"].isin([2, 3, 4]).astype(int)   # excludes "unharmed"
+    df["sexe_label"] = pd.to_numeric(df["sexe"], errors="coerce").map(C.SEXE_LABELS)
+
+    age = df["year"] - pd.to_numeric(df["an_nais"], errors="coerce")
+    df["age"] = age.where((age >= 0) & (age <= 110))
+    df["age_band"] = pd.cut(df["age"], bins=C.AGE_BINS, labels=C.AGE_LABELS, right=False)
+    return df
 
 
-# --- Category composition --------------------------------------------------
-def categories(raw: pd.DataFrame) -> pd.DataFrame:
-    """The four tax categories in % of GDP, per geo x year.
+def build_accident_level(year: int) -> pd.DataFrame:
+    """One row per accident, with context + a fatal flag (>=1 killed)."""
+    car = read_raw(year, "caracteristiques").rename(columns={"long": "lon"})
+    lie = read_raw(year, "lieux").drop_duplicates("Num_Acc")
+    usa = read_raw(year, "usagers")
 
-    Columns: geo, year, category, value, country, share_of_total.
-    """
-    df = _pc_gdp_main(raw)
-    df = df[df["na_item"].isin(C.CATEGORY_CODES)][["geo", "year", "na_item", "value"]].copy()
-    df["category"] = df["na_item"].map(C.CATEGORY_CODES)
-    df["country"] = df["geo"].map(country_name)
+    killed = (pd.to_numeric(usa["grav"], errors="coerce")
+              .eq(2).groupby(usa["Num_Acc"]).max())
 
-    total = df.groupby(["geo", "year"])["value"].transform("sum")
-    df["share_of_total"] = (df["value"] / total * 100).round(2)
-    return df.drop(columns=["na_item"]).reset_index(drop=True)
-
-
-def metric_map(raw: pd.DataFrame, year: int, category: str | None = None) -> pd.DataFrame:
-    """Per-geo value for one year, for the map and ranking.
-
-    ``category=None`` returns the headline total; otherwise the value of that
-    one category (one of ``constants.CATEGORY_ORDER``). Columns match
-    ``tax_ratio`` where possible: geo, country, iso3, is_eu_member, ratio, rank.
-    """
-    if category is None:
-        return tax_ratio(raw)[tax_ratio(raw)["year"] == year].copy()
-    cats = categories(raw)
-    df = cats[(cats["year"] == year) & (cats["category"] == category)][["geo", "value"]].copy()
-    df = df.rename(columns={"value": "ratio"})
-    df["country"] = df["geo"].map(country_name)
-    df["iso3"] = df["geo"].map(C.EUROSTAT_TO_ISO3)
-    df["is_eu_member"] = df["geo"].isin(C.EU27_MEMBERS)
-    members = df[df["is_eu_member"]].copy()
-    members["rank"] = members["ratio"].rank(ascending=False, method="min").astype(int)
-    df = df.merge(members[["geo", "rank"]], on="geo", how="left")
-    return df.reset_index(drop=True)
+    df = car[["Num_Acc", "jour", "mois", "an", "hrmn", "lum", "dep", "agg", "atm",
+              "lat", "lon"]].copy()
+    df = df.merge(lie[["Num_Acc", "catr", "vma"]], on="Num_Acc", how="left")
+    df["year"] = pd.to_numeric(df["an"], errors="coerce").astype("Int64")
+    df["month"] = pd.to_numeric(df["mois"], errors="coerce").astype("Int64")
+    dt = pd.to_datetime(
+        dict(year=df["year"], month=df["month"],
+             day=pd.to_numeric(df["jour"], errors="coerce")), errors="coerce")
+    df["weekday"] = dt.dt.dayofweek
+    df["hour"] = _hour(df["hrmn"])
+    df["metro"] = df["dep"].map(C.is_metropolitan)
+    df["region"] = df["dep"].map(C.DEP_TO_REGION)
+    df["agg_label"] = pd.to_numeric(df["agg"], errors="coerce").map(C.AGG_LABELS)
+    df["lat"] = _to_float(df["lat"])
+    df["lon"] = _to_float(df["lon"])
+    df["is_fatal"] = df["Num_Acc"].map(killed).fillna(False).astype(int)
+    return df
 
 
-def gap_by_category(raw: pd.DataFrame, geo: str, year: int) -> pd.DataFrame:
-    """Contribution of each category to the ``geo`` vs EU gap in a given year.
-
-    Columns: category, geo_value, eu_value, gap (geo - EU, in pts).
-    """
-    cats = categories(raw)
-    sub = cats[cats["year"] == year]
-    g = sub[sub["geo"] == geo].set_index("category")["value"]
-    eu = sub[sub["geo"] == C.EU_AGGREGATE].set_index("category")["value"]
-    out = pd.DataFrame({"geo_value": g, "eu_value": eu})
-    out["gap"] = (out["geo_value"] - out["eu_value"]).round(2)
-    return out.reindex(C.CATEGORY_ORDER).reset_index().rename(columns={"index": "category"})
+# --- Validation helpers (used by app + tests) ------------------------------
+def duplicate_accidents(year: int) -> int:
+    car = read_raw(year, "caracteristiques")
+    return int(car["Num_Acc"].duplicated().sum())
 
 
-# --- "Who collects": subsector shares -------------------------------------
-def subsector_shares(raw: pd.DataFrame, year: int) -> pd.DataFrame:
-    """Share of total receipts collected by each government subsector (%).
-
-    Uses MIO_EUR totals so the shares are of money actually collected.
-    Columns: geo, country, subsector, value, share.
-    """
-    df = raw[
-        (raw["unit"] == C.UNIT_MIO)
-        & (raw["sector"].isin(C.SUBSECTORS))
-        & (raw["na_item"] == C.NA_TOTAL)
-        & (raw["year"] == year)
-    ][["geo", "sector", "value"]].copy()
-    df["subsector"] = df["sector"].map(C.SUBSECTORS)
-    df["country"] = df["geo"].map(country_name)
-    total = df.groupby("geo")["value"].transform("sum")
-    df["share"] = (df["value"] / total * 100).round(1)
-    return df.reset_index(drop=True)
-
-
-# --- Data-quality tables ---------------------------------------------------
-def completeness_grid(raw: pd.DataFrame) -> pd.DataFrame:
-    """Boolean geo x year grid: is the headline total present?
-
-    Returns a wide frame indexed by geo (EU members + non-EU), columns = years,
-    values = 1 (present) / 0 (missing). Feeds the completeness heatmap.
-    """
-    df = _pc_gdp_main(raw)
-    df = df[df["na_item"] == C.NA_TOTAL]
-    geos = C.EU27_MEMBERS + C.NON_EU
-    years = list(range(int(df["year"].min()), int(df["year"].max()) + 1))
-    present = df.set_index(["geo", "year"]).index
-    grid = pd.DataFrame(0, index=geos, columns=years)
-    for geo, year in present:
-        if geo in grid.index and year in grid.columns:
-            grid.loc[geo, year] = 1
-    grid.index = [country_name(g) for g in grid.index]
-    return grid
-
-
-def duplicate_count(raw: pd.DataFrame) -> int:
-    """Number of duplicated observations on the natural key (expected 0)."""
-    key = ["geo", "year", "na_item", "sector", "unit"]
-    return int(raw.duplicated(key).sum())
-
-
-def sum_coherence(raw: pd.DataFrame) -> pd.DataFrame:
-    """Compare the sum of the 4 categories (minus D995) to the reported total.
-
-    Returns per geo x year: cat_sum, reported_total, abs_diff. Used both for a
-    quality check in the app and as a regression test.
-    """
-    df = _pc_gdp_main(raw)
-    cat = (
-        df[df["na_item"].isin(C.CATEGORY_CODES)]
-        .groupby(["geo", "year"])["value"].sum()
-        .rename("cat_sum")
-    )
-    unc = (
-        df[df["na_item"] == C.NA_UNCOLLECTABLE]
-        .set_index(["geo", "year"])["value"].rename("uncollectable")
-    )
-    tot = (
-        df[df["na_item"] == C.NA_TOTAL]
-        .set_index(["geo", "year"])["value"].rename("reported_total")
-    )
-    out = pd.concat([cat, unc, tot], axis=1)
-    out["uncollectable"] = out["uncollectable"].fillna(0.0)
-    out["cat_sum"] = (out["cat_sum"] - out["uncollectable"]).round(3)
-    out["abs_diff"] = (out["cat_sum"] - out["reported_total"]).abs().round(3)
-    return out.dropna(subset=["reported_total"]).reset_index()
-
-
-def abrupt_changes(raw: pd.DataFrame, threshold: float = 3.0) -> pd.DataFrame:
-    """Year-on-year ratio jumps larger than ``threshold`` points (outliers)."""
-    df = tax_ratio(raw)
-    df = df[df["is_eu_member"] | (df["geo"] == C.EU_AGGREGATE)].copy()
-    df = df.sort_values(["geo", "year"])
-    df["delta"] = df.groupby("geo")["ratio"].diff().round(2)
-    out = df[df["delta"].abs() >= threshold][["country", "year", "ratio", "delta"]]
-    return out.sort_values("delta", key=lambda s: s.abs(), ascending=False).reset_index(drop=True)
+def killed_count(df_usager: pd.DataFrame, metro_only: bool = True) -> int:
+    d = df_usager[df_usager["metro"]] if metro_only else df_usager
+    return int(d["killed"].sum())

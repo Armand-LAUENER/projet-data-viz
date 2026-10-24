@@ -22,5 +22,7 @@ SOFTWARE.
 
 ---
 
-Data are NOT covered by this licence. The dataset (Eurostat gov_10a_taxag) is
-© European Union, Eurostat, and is reused under CC BY 4.0. See README section 10.
+Data are NOT covered by this licence. The dataset (ONISR / BAAC road-accident
+database, data.gouv.fr) is reused under the Licence Ouverte / Etalab 2.0. The
+departments basemap (assets/departements.geojson) comes from the open
+france-geojson project. See README section 9.
