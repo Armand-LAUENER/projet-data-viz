@@ -6,7 +6,7 @@ not where and when they are most *deadly*.** The reader explores that contrast
 across time, geography and road-user profiles.
 
 - **Repository:** https://github.com/Armand-LAUENER/projet-data-viz
-- **Live app:** _<add Streamlit Community Cloud URL after deployment>_
+- **Live app:** https://projet-data-viz-fqbofjrosdu4xcvokeyvsb.streamlit.app/
 - **Demo video (2–4 min):** _<add link>_
 - **Storyboard:** [`STORYBOARD.md`](STORYBOARD.md)
 
