@@ -74,6 +74,16 @@ def test_modes_are_all_labelled():
 
 
 @proc_only
+def test_dumbbell_chart_has_data():
+    """Regression: the mode dumbbell must plot every mode, not an empty frame."""
+    from utils import viz
+    mode = pd.read_parquet(C.PROCESSED_DIR / "by_mode.parquet")
+    fig = viz.dumbbell_mode(mode[mode["year"].between(2019, 2024)])
+    markers = [t for t in fig.data if t.mode == "markers"]
+    assert markers and len(markers[-1].x) == len(set(mode["mode"]))
+
+
+@proc_only
 def test_gravity_index_is_sane():
     """Gravity index (killed per 100 accidents) stays within a plausible range."""
     dep = pd.read_parquet(C.PROCESSED_DIR / "by_dep.parquet")

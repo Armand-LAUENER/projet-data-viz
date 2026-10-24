@@ -144,7 +144,8 @@ def dumbbell_mode(df: pd.DataFrame) -> go.Figure:
         victims=("victims", "sum"), killed=("killed", "sum")).reset_index()
     g["vic_share"] = g["victims"] / g["victims"].sum() * 100
     g["kill_share"] = g["killed"] / g["killed"].sum() * 100
-    g = g.set_index("mode").reindex([m for m in C.MODE_ORDER if m in g.index]).reset_index()
+    g = g.set_index("mode")
+    g = g.reindex([m for m in C.MODE_ORDER if m in g.index]).reset_index()
     fig = go.Figure()
     for _, r in g.iterrows():
         fig.add_trace(go.Scatter(
