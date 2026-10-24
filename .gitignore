@@ -16,6 +16,10 @@ __pycache__/
 .idea/
 *.log
 
+# Draft demo video (local working file, not a repo deliverable)
+*.mp4
+*.webm
+
 # Raw BAAC CSVs are large and re-downloadable via scripts/download_data.py.
 # The small aggregated tables in data/processed/ ARE committed.
 data/raw/
