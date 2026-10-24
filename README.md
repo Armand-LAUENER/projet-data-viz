@@ -6,6 +6,7 @@ what is the gap actually made of?** It uses Eurostat's national-accounts tax
 aggregates (1995–2025, ~30 countries) and lets the reader explore the answer
 rather than take it on faith.
 
+- **Repository:** https://github.com/Armand-LAUENER/projet-data-viz
 - **Live app:** _<add Streamlit Community Cloud URL after deployment>_
 - **Demo video (2–4 min):** _<add link>_
 - **Storyboard:** [`STORYBOARD.md`](STORYBOARD.md)
@@ -96,8 +97,8 @@ See [`utils/prep.py`](utils/prep.py) for the exact transformations and
 ## 5. Run the project
 
 ```bash
-git clone <repo-url>
-cd Projet_data_viz
+git clone https://github.com/Armand-LAUENER/projet-data-viz.git
+cd projet-data-viz
 
 # with uv (recommended)
 uv sync --extra dev        # or: make install
