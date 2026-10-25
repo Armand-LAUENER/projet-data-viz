@@ -7,7 +7,7 @@ across time, geography and road-user profiles.
 
 - **Repository:** https://github.com/Armand-LAUENER/projet-data-viz
 - **Live app:** https://projet-data-viz-fqbofjrosdu4xcvokeyvsb.streamlit.app/
-- **Demo video (2–4 min):** _<add link>_
+- **Demo video (2–4 min):** https://youtu.be/fCeRyCr1uwE
 - **Storyboard:** [`STORYBOARD.md`](STORYBOARD.md)
 
 > The app is **descriptive**: it compares and decomposes. It makes **no causal
